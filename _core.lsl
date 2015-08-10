@@ -15,14 +15,14 @@
 #include "./classes/kc BasicCell.h.lsl"
 #include "./classes/kc SpawnHub.h.lsl"
 
-// Level saving includes
-#include "./classes/kc LevelSaveController.h.lsl"
-#include "./classes/kc LevelSaveBoundary.h.lsl"
-#include "./classes/kc LevelSave.h.lsl"
-#include "./classes/kc LevelSaveObjects.h.lsl"
+// Cell saving includes
+#include "./classes/kc CellSaveController.h.lsl"
+#include "./classes/kc CellSaveBoundary.h.lsl"
+#include "./classes/kc CellSave.h.lsl"
+#include "./classes/kc CellSaveObjects.h.lsl"
 
-// Level loading includes
-#include "./classes/kc LevelLoad.h.lsl"
-#include "./classes/kc LevelLoadObjects.h.lsl"
+// Cell loading includes
+#include "./classes/kc CellLoad.h.lsl"
+#include "./classes/kc CellLoadObjects.h.lsl"
 
 

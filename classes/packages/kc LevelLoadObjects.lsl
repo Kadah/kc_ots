@@ -1,5 +1,5 @@
 /*
-Level Load: Objects
+Cell Load: Objects
 
 TODO: Figure out how to tell what spawn hub to send data to
 
@@ -96,7 +96,7 @@ loadBatchAndRezObjects() {
         
         if (lst_ObjDataRez != []) {
             // debugUncommon("ObjDataRez: " + llDumpList2String(lst_ObjDataRez, ", "));
-            KCSpawnHub$rezObjectList(str_SpawnHubUUID, llList2Json(JSON_ARRAY, lst_ObjDataRez), G_int_LoadFlag, cls$name, KCLevelLoadObjectsCB$loadingRezCB);
+            KCSpawnHub$rezObjectList(str_SpawnHubUUID, llList2Json(JSON_ARRAY, lst_ObjDataRez), G_int_LoadFlag, cls$name, KCCellLoadObjectsCB$loadingRezCB);
         }
     }
     else {
@@ -139,9 +139,9 @@ default
 	
 	// Here's where you receive callbacks from running methods
     if(method$isCallback) {
-        if ((CB == KCLevelLoadObjectsCB$ping) && (METHOD == KCSpawnHubMethod$ping)) {
+        if ((CB == KCCellLoadObjectsCB$ping) && (METHOD == KCSpawnHubMethod$ping)) {
             string str_SpawnHubName = method_arg(0);
-            debugUncommon("KCLevelLoadObjectsCB$ping responce from: \"" + str_SpawnHubName + "\"");
+            debugUncommon("KCCellLoadObjectsCB$ping responce from: \"" + str_SpawnHubName + "\"");
             
             // Store the UUID/link so we can talk to it
             string uuidOrLink;
@@ -168,8 +168,8 @@ default
                 kcCBSimple$fireCB( [TRUE] );
             }
         }
-        else if ((CB == KCLevelLoadObjectsCB$loadingRezCB) && (METHOD == KCSpawnHubMethod$rezObjectList)) {
-            debugUncommon("KCLevelLoadObjectsCB$loadingRezCB");
+        else if ((CB == KCCellLoadObjectsCB$loadingRezCB) && (METHOD == KCSpawnHubMethod$rezObjectList)) {
+            debugUncommon("KCCellLoadObjectsCB$loadingRezCB");
             
             loadBatchAndRezObjects();
             
@@ -180,20 +180,20 @@ default
 	// ByOwner means the method was run by the owner of the prim
     if(method$byOwner) {
         
-        if(METHOD == KCLevelLoadObjectsMethod$init) {
+        if(METHOD == KCCellLoadObjectsMethod$init) {
             debugUncommon("KCRezMethod$init: " + method_arg(0));
             G_lst_SpawnHubsWaiting = llJson2List(method_arg(0));
             G_lst_SpawnHubs = [];
-            KCSpawnHub$pingLocal( KCLevelLoadObjectsCB$ping );
-            KCSpawnHub$pingRemote( KCLevelLoadObjectsCB$ping );
+            KCSpawnHub$pingLocal( KCCellLoadObjectsCB$ping );
+            KCSpawnHub$pingRemote( KCCellLoadObjectsCB$ping );
             multiTimer([PING_TIMEOUT, "", 10, FALSE]);
             
             kcCBSimple$delayCB();
             return;
         }
         
-        else if(METHOD == KCLevelLoadObjectsMethod$rezObjectList) {
-            debugUncommon("KCLevelLoadObjectsMethod$rezObjectList");
+        else if(METHOD == KCCellLoadObjectsMethod$rezObjectList) {
+            debugUncommon("KCCellLoadObjectsMethod$rezObjectList");
             
             string str_SpawnHubName = method_arg(0);
             string json_Rez_Objects = method_arg(1);
@@ -211,15 +211,15 @@ default
             return; //The callback will be handled by the spawn hub
         }
         
-        else if (METHOD == KCLevelLoadObjectsMethod$load) {
-            debugUncommon("KCLevelLoadObjectsMethod$load");
+        else if (METHOD == KCCellLoadObjectsMethod$load) {
+            debugUncommon("KCCellLoadObjectsMethod$load");
             
             if (BFL&BFL_LOADING) {
                 debugRare("ERROR: Spawn hub is busy loading data already.");
                 return;
             }
             
-            debugUncommon("Loading level");
+            debugUncommon("Loading cell");
             BFL = BFL|BFL_LOADING;
             
             updateBlockDBPrims(FALSE);
@@ -230,8 +230,8 @@ default
             G_int_NumObjsLoaded = 0;
             G_int_DataIndex = 0;
             G_lst_ObjData       = [];
-            G_int_NumObjs       = KCLevel$getNumObjs();
-            G_int_DataIndexEnd  = KCLevel$getLevelDataEnd();
+            G_int_NumObjs       = KCCell$getNumObjs();
+            G_int_DataIndexEnd  = KCCell$getCellDataEnd();
             
             debugUncommon("NumObjs: "+(string)G_int_NumObjs + " DataEnd: "+(string)G_int_DataIndexEnd + " Pos: " + (string)G_vec_Pos);
             

@@ -8,7 +8,7 @@ TODO: A clear system of what hub to find objects in.
 TODO: Object lists/indexing
 TODO: Hubs should likely be linked to the mission save controller, or possibly unlinked, for testing rez.
 TODO: A system for updating scripts in mission objects
-TODO: Expose tick rate via method so that it can be adjusted, ie. Initial mission spawn can be done as fast as possible while later level loading could be done at a slower rate that would not affect play.
+TODO: Expose tick rate via method so that it can be adjusted, ie. Initial mission spawn can be done as fast as possible while later cell loading could be done at a slower rate that would not affect play.
 
 Make this spawn hub independent from being a child prim to a root object
 #define STANDALONE_SPAWN
@@ -48,7 +48,7 @@ list _REZ_QUEUE; // [ int_ObjectName, vec_Pos, rot_Rot, int_Flags, delayed_cb_da
 list _MULTIREZ_CB_DATA;
 
 runQueue() {
-    if (!BFL&BFL_QUEUE && _REZ_QUEUE != []) {
+    if (!(BFL&BFL_QUEUE) && _REZ_QUEUE != []) {
         BFL = BFL|BFL_QUEUE;
         llSetTimerEvent(REZ_TICK_RATE);
     }

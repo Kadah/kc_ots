@@ -48,7 +48,7 @@ default
             else if (llGetSubString(message, 0, 0) == "S") {
                 vector vec_Pos = llGetRootPosition();
                 list lst_data = llCSV2List(llGetSubString(message, 1, -1));
-                // integer int_Levelid = (integer)llList2String(lst_data, 0);
+                // integer int_Cellid = (integer)llList2String(lst_data, 0);
                 vector vec_UpperBoundary = (vector)llList2String(lst_data, 1);
                 vector vec_LowerBoundary = (vector)llList2String(lst_data, 2);
                 

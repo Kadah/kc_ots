@@ -1,10 +1,10 @@
 
 
-#define KCLevelSaveObjectsMethod$save 1000               // 
+#define KCCellSaveObjectsMethod$save 1000               // 
 
 
 
-#define KCLevelSaveObjects$save( vec_Upper, vec_Lower, cb ) runMethod((string)LINK_THIS, "kc LevelSaveObjects", KCLevelSaveObjectsMethod$save, ([ vec_Upper, vec_Lower ]), cb)
+#define KCCellSaveObjects$save( vec_Upper, vec_Lower, cb ) runMethod((string)LINK_THIS, "kc CellSaveObjects", KCCellSaveObjectsMethod$save, ([ vec_Upper, vec_Lower ]), cb)
 
 
 

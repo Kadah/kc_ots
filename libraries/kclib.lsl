@@ -15,7 +15,7 @@
 #define mem_usage() debugUncommon(cls$name + " - " + (string)llGetFreeMemory() + " bytes free " + (string)llGetUsedMemory() + " bytes used of " + (string)llGetMemoryLimit() + " bytes limit")
 
 
-// Simple delayed callback, single level
+// Simple single delayed callback
 // Declare kcCBSimple$vars; within your variables section.
 // Do kcCBSimple$delayCB();return; at the end of the method being delayed.
 // Call kcCBSimple$fireCB(([returned,data])); to fire callback.

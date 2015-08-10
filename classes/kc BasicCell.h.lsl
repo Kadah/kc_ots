@@ -5,7 +5,7 @@
 
 #define KCBasicCell$clearGroup( int_RezGroup ) llRegionSay(REZZED_CHANNEL, "C"+(string)int_RezGroup)
 
-#define KCBasicCell$saveLevelObjs( int_RezGroup, vec_UpperBoundary, vec_LowerBoundary ) llRegionSay(REZZED_CHANNEL, "S"+llList2CSV([int_RezGroup, FLOOR_VEC_STRING(vec_UpperBoundary), FLOOR_VEC_STRING(vec_LowerBoundary)]))
+#define KCBasicCell$saveCellObjs( int_RezGroup, vec_UpperBoundary, vec_LowerBoundary ) llRegionSay(REZZED_CHANNEL, "S"+llList2CSV([int_RezGroup, FLOOR_VEC_STRING(vec_UpperBoundary), FLOOR_VEC_STRING(vec_LowerBoundary)]))
 
 
 

@@ -1,5 +1,5 @@
 /*
-Level Save
+Cell Save
 
 TODO: Much.
 
@@ -52,12 +52,12 @@ default
 	// Here's where you receive callbacks from running methods
     if(method$isCallback) {
         
-        if ((CB == KCLevelSaveCB$setupBoundaryCB) && (METHOD == KCLevelSaveBoundaryMethod$setup)) {
+        if ((CB == KCCellSaveCB$setupBoundaryCB) && (METHOD == KCCellSaveBoundaryMethod$setup)) {
             BFL = BFL|BFL_BOUNDSSETUP;
             
             debugUncommon("setupBoundaryCB: " + method_arg(0));
         }
-        else if ((CB == KCLevelSaveCB$getBoundaryCB) && (METHOD == KCLevelSaveBoundaryMethod$getBoundary)) {
+        else if ((CB == KCCellSaveCB$getBoundaryCB) && (METHOD == KCCellSaveBoundaryMethod$getBoundary)) {
             
             BFL = BFL|BFL_BOUNDS;
             
@@ -66,10 +66,10 @@ default
             vector vec_Upper = (vector)method_arg(1);
             vector vec_Lower = (vector)method_arg(2);
             
-            KCLevelSaveObjects$save( vec_Upper, vec_Lower, KCLevelSaveCB$objectsSaveCB );
+            KCCellSaveObjects$save( vec_Upper, vec_Lower, KCCellSaveCB$objectsSaveCB );
             
         }
-        else if ((CB == KCLevelSaveCB$objectsSaveCB) && (METHOD == KCLevelSaveObjectsMethod$save)) {
+        else if ((CB == KCCellSaveCB$objectsSaveCB) && (METHOD == KCCellSaveObjectsMethod$save)) {
             BFL = (BFL&~BFL_SAVING)|BFL_OBJS;
             if((integer)method_arg(0) == 1) {
             
@@ -90,11 +90,11 @@ default
     
 	// ByOwner means the method was run by the owner of the prim
     if(method$byOwner) {
-        if(METHOD == KCLevelSaveMethod$save) {
-            debugUncommon("KCLevelSaveMethod$save");
+        if(METHOD == KCCellSaveMethod$save) {
+            debugUncommon("KCCellSaveMethod$save");
             
             BFL = BFL|BFL_SAVING;
-            KCLevelSaveBoundary$getBoundary( KCLevelSaveCB$getBoundaryCB );
+            KCCellSaveBoundary$getBoundary( KCCellSaveCB$getBoundaryCB );
             kcCBSimple$delayCB()
             return;
         }

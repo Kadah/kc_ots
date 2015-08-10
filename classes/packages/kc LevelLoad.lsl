@@ -1,8 +1,8 @@
 /*
-Level Load
-Functionally this is the level loading controller at this stage
+Cell Load
+Functionally this is the cell loading controller at this stage
 
-This currently only supports test rezing from the Level Save Controler.
+This currently only supports test rezing from the Cell Save Controler.
 TODO: This will need to also support rezing in the distributable mission package.
 TODO: Possible support for loading data from other sources like notecards
 
@@ -61,7 +61,7 @@ default
 	// Here's where you receive callbacks from running methods
     if(method$isCallback) {
         
-        if ((CB == KCLevelLoadCB$objectLoadCB) && (METHOD == KCLevelLoadObjectsMethod$load)) {
+        if ((CB == KCCellLoadCB$objectLoadCB) && (METHOD == KCCellLoadObjectsMethod$load)) {
             BFL = BFL|BFL_OBJS;
             
             debugUncommon("objectLoadCB: " + method_arg(0));
@@ -85,13 +85,13 @@ default
     
 	// ByOwner means the method was run by the owner of the prim
     if(method$byOwner) {
-        if(METHOD == KCLevelLoadMethod$load) {
-            debugUncommon("KCLevelLoadMethod$load");
+        if(METHOD == KCCellLoadMethod$load) {
+            debugUncommon("KCCellLoadMethod$load");
             
             BFL = BFL|BFL_LOADING;
             integer int_Flags = (integer)method_arg(0);
             vector vec_Pos = (vector)method_arg(1);
-            KCLevelLoadObjects$load( int_Flags, vec_Pos, KCLevelLoadCB$objectLoadCB );
+            KCCellLoadObjects$load( int_Flags, vec_Pos, KCCellLoadCB$objectLoadCB );
             
             kcCBSimple$delayCB()
             return;

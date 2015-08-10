@@ -1,5 +1,5 @@
 /*
-Level Save: Objects
+Cell Save: Objects
 
 */
 
@@ -74,8 +74,8 @@ default
         debugUncommon("Done Saving - Objs: " + (string)G_int_NumObjs);
         
         
-        KCLevel$setNumObjs( G_int_NumObjs );
-        KCLevel$setLevelDataEnd( G_int_DataIndex );
+        KCCell$setNumObjs( G_int_NumObjs );
+        KCCell$setCellDataEnd( G_int_DataIndex );
         
         BFL = (BFL&~BFL_RX)|BFL_DONE;
         mem_usage();
@@ -141,8 +141,8 @@ default
 	// ByOwner means the method was run by the owner of the prim
     if(method$byOwner) {
         
-        if(METHOD == KCLevelSaveObjectsMethod$save) {
-            debugUncommon("KCLevelSaveObjectsMethod$save");
+        if(METHOD == KCCellSaveObjectsMethod$save) {
+            debugUncommon("KCCellSaveObjectsMethod$save");
             
             G_int_NumObjs = 0;
             G_int_DataIndex = 0;
@@ -158,7 +158,7 @@ default
             
             debugUncommon("vec_Upper: " + (string)vec_Upper + " vec_Lower: " + (string)vec_Lower);
             
-            KCBasicCell$saveLevelObjs( 0, vec_Upper, vec_Lower );
+            KCBasicCell$saveCellObjs( 0, vec_Upper, vec_Lower );
             
             llSetTimerEvent(DATAWAIT_TIMEOUT);
             
