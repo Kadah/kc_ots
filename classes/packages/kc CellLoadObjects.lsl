@@ -34,7 +34,7 @@ list G_lst_ObjData;
 
 list readNextObject() {
     if ((llGetListLength(G_lst_ObjData) < 2) && (G_int_DataIndex <= G_int_DataIndexEnd)) {
-        string str_RezData = llList2String(G_lst_ObjData, 0) + (string)llGetLinkMedia(llList2Integer(G_lst_BlockDB, llFloor(G_int_DataIndex/9)), (G_int_DataIndex%9), [PRIM_MEDIA_HOME_URL, PRIM_MEDIA_CURRENT_URL]);
+        string str_RezData = llList2String(G_lst_ObjData, 0) + (string)llGetLinkMedia(llList2Integer(G_lst_BlockDB, llFloor(G_int_DataIndex/9)), (G_int_DataIndex%9), [PRIM_MEDIA_HOME_URL, PRIM_MEDIA_CURRENT_URL, PRIM_MEDIA_WHITELIST]);
         G_int_DataIndex++;
         G_lst_ObjData = llParseString2List(str_RezData, [";"], []);
         // debugUncommon("G_int_DataIndex: " + (string)G_int_DataIndex + " G_lst_ObjData: " + llDumpList2String(G_lst_ObjData, ", "));

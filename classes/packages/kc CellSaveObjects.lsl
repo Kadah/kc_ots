@@ -29,6 +29,7 @@ writeBlock() {
     // debugUncommon("Saving Rez Data");
     // llOwnerSay(llGetSubString(G_str_ObjDataBuffer,0,1023));
     // llOwnerSay(llGetSubString(G_str_ObjDataBuffer,1024,2047));
+    // llOwnerSay(llGetSubString(G_str_ObjDataBuffer,2048,3071));
     if (llGetListLength(G_lst_BlockDB) < llFloor(G_int_DataIndex/9)) {
         debugRare("ERROR: Ran out of rez DB prims, add more and try again.");
         return;
@@ -36,14 +37,15 @@ writeBlock() {
     llSetLinkMedia( llList2Integer(G_lst_BlockDB, llFloor(G_int_DataIndex/9)), (G_int_DataIndex%9), [
         PRIM_MEDIA_HOME_URL, llGetSubString(G_str_ObjDataBuffer,0,1023),
         PRIM_MEDIA_CURRENT_URL, llGetSubString(G_str_ObjDataBuffer,1024,2047), 
+        PRIM_MEDIA_WHITELIST, llGetSubString(G_str_ObjDataBuffer,2048,3071), 
         PRIM_MEDIA_PERMS_INTERACT, PRIM_MEDIA_PERM_NONE, PRIM_MEDIA_PERMS_CONTROL, PRIM_MEDIA_PERM_NONE
     ]);
     G_int_DataIndex++;
-    if (llStringLength(G_str_ObjDataBuffer) < 2048) {
+    if (llStringLength(G_str_ObjDataBuffer) < 3072) {
         G_str_ObjDataBuffer = "";
     }
     else {
-        G_str_ObjDataBuffer = llGetSubString(G_str_ObjDataBuffer,2048, -1);
+        G_str_ObjDataBuffer = llGetSubString(G_str_ObjDataBuffer,3072, -1);
     }
     // mem_usage();
 }
@@ -111,7 +113,7 @@ default
 
                 G_int_NumObjs++;
 
-                if (llStringLength(G_str_ObjDataBuffer) >= 2048) {
+                if (llStringLength(G_str_ObjDataBuffer) >= 3072) {
                     writeBlock();
                 }
                 
