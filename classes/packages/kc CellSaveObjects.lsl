@@ -20,46 +20,21 @@ integer BFL;
 #define BFL_DONE 0x4
 
 integer G_int_ListenHandle;
+string str_CellName;
 integer G_int_NumObjs;
-integer G_int_DataIndex;
-string G_str_ObjDataBuffer;
 
-
-writeBlock() {
-    // debugUncommon("Saving Rez Data");
-    // llOwnerSay(llGetSubString(G_str_ObjDataBuffer,0,1023));
-    // llOwnerSay(llGetSubString(G_str_ObjDataBuffer,1024,2047));
-    // llOwnerSay(llGetSubString(G_str_ObjDataBuffer,2048,3071));
-    if (llGetListLength(G_lst_BlockDB) < llFloor(G_int_DataIndex/9)) {
-        debugRare("ERROR: Ran out of rez DB prims, add more and try again.");
-        return;
-    }
-    llSetLinkMedia( llList2Integer(G_lst_BlockDB, llFloor(G_int_DataIndex/9)), (G_int_DataIndex%9), [
-        PRIM_MEDIA_HOME_URL, llGetSubString(G_str_ObjDataBuffer,0,1023),
-        PRIM_MEDIA_CURRENT_URL, llGetSubString(G_str_ObjDataBuffer,1024,2047), 
-        PRIM_MEDIA_WHITELIST, llGetSubString(G_str_ObjDataBuffer,2048,3071), 
-        PRIM_MEDIA_PERMS_INTERACT, PRIM_MEDIA_PERM_NONE, PRIM_MEDIA_PERMS_CONTROL, PRIM_MEDIA_PERM_NONE
-    ]);
-    G_int_DataIndex++;
-    if (llStringLength(G_str_ObjDataBuffer) < 3072) {
-        G_str_ObjDataBuffer = "";
-    }
-    else {
-        G_str_ObjDataBuffer = llGetSubString(G_str_ObjDataBuffer,3072, -1);
-    }
-    // mem_usage();
-}
+KCbucket$varsDB( objcache );
+KCbucket$varsWrite( objcache );
 
 
 
 default 
 {
-	// Start up the script
     state_entry() {
 		mem_usage();
+		DB2$ini();
     }
     
-	// Timer event
     timer() {
         llSetTimerEvent(0.0);
         llListenRemove(G_int_ListenHandle);
@@ -68,21 +43,21 @@ default
         
         if (G_int_NumObjs == 0) {debugRare("WARNING: No objects found.");}
         
-        writeBlock();
+		KCbucket$writeClose( objcache );
         
-        if (G_str_ObjDataBuffer != "") {debugRare("ERROR: Extra data left in buffer: " + G_str_ObjDataBuffer); return;}
+        debugUncommon("Done Saving - #Objs: " + (string)G_int_NumObjs + " Data size: "+(string)KCbucket$getBlockNum(objcache) + " Prims: "+(string)KCbucket$getBlockNumPrims(objcache));
+		
+		llSetText( "Finished\n" + (string)G_int_NumObjs + " objects saved", ZERO_VECTOR, 1 );
         
-        
-        debugUncommon("Done Saving - Objs: " + (string)G_int_NumObjs);
-        
-        
+		// Store general details about objects in this cell
         KCCell$setNumObjs( G_int_NumObjs );
-        KCCell$setCellDataEnd( G_int_DataIndex );
+        // KCCell$setCellDataLength( G_int_DataIndex );
         
-        BFL = (BFL&~BFL_RX)|BFL_DONE;
         mem_usage();
-        
-        kcCBSimple$fireCB( ([ TRUE, G_int_NumObjs, G_int_DataIndex ]) );
+		
+		//Callback to controller instead of starting the indexing from here
+		// KCCellSaveIndexer$index( str_CellName, KCCellSaveObjectsCB$indexCB );
+		kcCBSimple$fireCB( ([ TRUE, G_int_NumObjs, KCbucket$getBlockNum(objcache), KCbucket$getBlockNumPrims(objcache) ]) );
     }
     
 	
@@ -90,36 +65,37 @@ default
     listen(integer chan, string name, key id, string message) {
         debugCommon("COM received:\n"+message);
         if (chan == REZZED_REPLY_CHANNEL && llGetOwnerKey(id) == llGetOwner()) {
-            // Simple objects
             if (llGetSubString(message,0,0) == "S") {
-                // Simple objects
                 list lst_ObjData = llGetObjectDetails(id, [OBJECT_NAME, OBJECT_POS, OBJECT_ROT]);
                 vector vec_Pos = llGetRootPosition();
                 vec_Pos = llList2Vector(lst_ObjData, 1) - FLOOR_VEC(vec_Pos);
                 rotation rot_Rot = llList2Rot(lst_ObjData, 2);
                 
+				string str_ExtraData = "";
+				if (llStringLength(message) > 1) {
+					str_ExtraData = llGetSubString(message,0,1);
+				}
+				
+				// There is no practial reason why this shouldn't be JSON_APPEND
+				// The savings teh custom formate had are not that great
+				string str_Data = llList2Json(JSON_ARRAY, [
+					"OBJ", // class
+					llList2String(lst_ObjData, 0), // nane
+					id, // id, stored temporarily
+					fuis(vec_Pos.x) + fuis(vec_Pos.y) + fuis(vec_Pos.z) + 
+					fuis(rot_Rot.x) + fuis(rot_Rot.y) + fuis(rot_Rot.z) + fuis(rot_Rot.s), // pos/rot
+					str_ExtraData, // nonspecific extra data
+					KCbucket$dataAddress_Encode(KCbucket$writeGetNextAddress(objcache)) // data address
+				]);
+				// llOwnerSay((string)G_int_NumObjs+": "+str_Data);
+				
+				KCbucket$write( objcache, str_Data );
                 
-                //16383
-                // string d = llGetSubString(llIntegerToBase64(16383),3,5);
-                // integer i = llBase64ToInteger("AAA"+d);
-                
-                
-                
-                // G_str_ObjDataBuffer += llList2String(lst_ObjData, 0) + fuis(vec_Pos.x) + fuis(vec_Pos.y) + fuis(vec_Pos.z) + fuis(rot_Rot.x) + fuis(rot_Rot.y) + fuis(rot_Rot.z) + fuis(rot_Rot.s) + ";";
-                G_str_ObjDataBuffer += llList2String(lst_ObjData, 0) + fuis(vec_Pos.x) + fuis(vec_Pos.y) + fuis(vec_Pos.z) + fuis(rot_Rot.x) + fuis(rot_Rot.y) + fuis(rot_Rot.z) + fuis(rot_Rot.s) + ";";
-                
-                
-                // debugUncommon(" Obj: " + (string)G_int_NumObjs + ": " + llDumpList2String(lst_ObjData, ", ") + " - " + (string)vec_Pos + " - " + (string)llStringLength(G_str_ObjDataBuffer));
-
                 G_int_NumObjs++;
-
-                if (llStringLength(G_str_ObjDataBuffer) >= 3072) {
-                    writeBlock();
-                }
-                
+				llSetText( (string)G_int_NumObjs + " objects saved", ZERO_VECTOR, 1 );
+				
                 // Reset timeout
                 llSetTimerEvent(DATAWAIT_TIMEOUT);
-                
             }
         }
     }
@@ -138,7 +114,21 @@ default
     */ 
 	
 	// Here's where you receive callbacks from running methods
-    if(method$isCallback) {return;}
+    if(method$isCallback) {
+		if ((CB == KCCellSaveObjectsCB$indexCB) && (METHOD == KCCellSaveIndexerMethod$index)) {
+			BFL = (BFL&~BFL_RX)|BFL_DONE;
+			if ((integer)method_arg(0)) {
+				integer int_LastDataFace = (integer)method_arg(1);
+				debugUncommon("Data in: " + (string)int_LastDataFace + " data out: " + (string)int_LastDataFace);
+				
+				kcCBSimple$fireCB( ([ TRUE, G_int_NumObjs, int_LastDataFace ]) );
+			}
+			else {
+				kcCBSimple$fireCB( ([ FALSE ]) );
+			}
+		}
+		return;
+	}
     
 	// ByOwner means the method was run by the owner of the prim
     if(method$byOwner) {
@@ -146,26 +136,27 @@ default
         if(METHOD == KCCellSaveObjectsMethod$save) {
             debugUncommon("KCCellSaveObjectsMethod$save");
             
-            G_int_NumObjs = 0;
-            G_int_DataIndex = 0;
-            G_str_ObjDataBuffer = "";
+			G_int_NumObjs = 0;
+			KCbucket$writeSeek( objcache, 0 );
+			KCbucket$initDB( objcache, "CD", TRUE );
             
-            updateBlockDBPrims(TRUE);
-            
-            BFL = BFL_RX;
-            G_int_ListenHandle = llListen(REZZED_REPLY_CHANNEL,"","","");
-            
-            vector vec_Upper = (vector)method_arg(0);
-            vector vec_Lower = (vector)method_arg(1);
-            
-            debugUncommon("vec_Upper: " + (string)vec_Upper + " vec_Lower: " + (string)vec_Lower);
-            
-            KCBasicCell$saveCellObjs( 0, vec_Upper, vec_Lower );
-            
-            llSetTimerEvent(DATAWAIT_TIMEOUT);
-            
-            kcCBSimple$delayCB();
-            return;
+			if (KCbucket$DBOK(objcache)) {
+				BFL = BFL_RX;
+				G_int_ListenHandle = llListen(REZZED_REPLY_CHANNEL,"","","");
+				
+				str_CellName = method_arg(0);
+				
+				debugUncommon("Saving CellName: " + str_CellName);
+				
+				KCBasicCell$saveCellObjs( str_CellName );
+				
+				KCbucket$write( objcache, llList2Json(JSON_ARRAY, ["CELL", str_CellName]) );
+				
+				llSetTimerEvent(DATAWAIT_TIMEOUT);
+				
+				kcCBSimple$delayCB();
+				return;
+			}
         }
         
     }
