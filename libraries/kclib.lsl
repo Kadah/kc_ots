@@ -11,9 +11,17 @@
 
 #include "./kcconst.lsl"
 
+#define mem_usage_string ((string)llGetFreeMemory() + " bytes free, " + (string)llGetUsedMemory() + " bytes used")
+#define mem_usage() debugUncommon((string)llGetMemoryLimit() + " bytes limit, " + mem_usage_string)
 
-#define mem_usage() debugUncommon(cls$name + " - " + (string)llGetFreeMemory() + " bytes free " + (string)llGetUsedMemory() + " bytes used of " + (string)llGetMemoryLimit() + " bytes limit")
 
+//https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
+#define CAT(a, ...) PRIMITIVE_CAT(a, __VA_ARGS__)
+#define PRIMITIVE_CAT(a, ...) a ## __VA_ARGS__
+
+//http://www.decompile.com/cpp/faq/file_and_line_error_string.htm
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 // Simple single delayed callback
 // Declare kcCBSimple$vars; within your variables section.
@@ -45,7 +53,7 @@ string hex(integer value)
     if (value & 0x80000000) // means (integer < 0) but is smaller and faster
     {
         lead = "-0x";
-        value = -value; // unnecessary when value == -0x80000000
+        value = -value; // unwhen value == -0x80000000
     }
  
     integer lsn; // least significant nybble
@@ -58,6 +66,9 @@ string hex(integer value)
  
     return lead + nybbles;
 }
+
+//The following code contains magic, dragons and/or pepperoni -KC
+
 // http://wiki.secondlife.com/wiki/Float2Hex
 string hexc="0123456789ABCDEF";//faster
 string Float2Hex(float input)// Doubles Unsupported, LSO Safe, Mono Safe
@@ -112,6 +123,10 @@ float iuf(integer a)
 string fuis(float b) { return llGetSubString(llIntegerToBase64(fui(b)),0,5); }
 float siuf(string b) { return iuf(llBase64ToInteger(b)); }
 
+integer min( integer x, integer y) {
+   if( y < x ) return y;
+   return x;
+}
 integer max( integer x, integer y) {
    if( y > x ) return y;
    return x;
@@ -151,6 +166,13 @@ integer max( integer x, integer y) {
 #define FLOOR_VEC_STRING( vec_Pos ) ("<" + (string)((integer)vec_Pos.x) + "," + (string)((integer)vec_Pos.y) + "," + (string)((integer)vec_Pos.z) + ">")
 
 
+
+// http://wiki.secondlife.com/wiki/Progress_Bar
+#define KCLib$progressPie( flt_Cur ) llList2String(["○","◔","◑","◕","●"], llFloor(flt_Cur * 5))
+#define KCLib$progressFill( flt_Cur ) llList2String(["䷁","䷖","䷇","䷏","䷎","䷆","䷗","䷚","䷂","䷲","䷣","䷒","䷨","䷻","䷵","䷊","䷙","䷄","䷡","䷍","䷪","䷀"], llFloor(flt_Cur * 22))
+#define KCLib$progressArrow( flt_Cur ) llList2String(["⬆","⬈","➨","⬊","⬇","⬋","⬅","⬉"], llFloor(flt_Cur * 8))
+
+#define KCLib$progressArrowSpin( int_Cur, int_Spins ) KCLib$progressArrow(((int_Cur % int_Spins) / (float)int_Spins))
 
 
 // *** util_rotate_around_point ***

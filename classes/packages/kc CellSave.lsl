@@ -8,6 +8,7 @@ TODO: Much.
 #define USE_SHARED ["config","mis"]
 #include "../../_core.lsl"
 
+string str_CellName;
 
 integer BFL;
 #define BFL_BOUNDSSETUP 0x1
@@ -23,7 +24,6 @@ kcCBSimple$vars;
 
 // Named timers
 // timerEvent(string id, string data) {
-    
 // }
 
 default 
@@ -32,54 +32,27 @@ default
     state_entry()
     {
         mem_usage();
+		DB2$ini();
     }
     
 	// Timer event
     // timer(){multiTimer([]);}
     
 	
-	// This is the standard linkmessages
     #include "xobj_core/_LM.lsl" 
-    /*
-        Included in all these calls:
-        METHOD - (int)method  
-        INDEX - (int)obj_index
-        PARAMS - (var)parameters 
-        SENDER_SCRIPT - (var)parameters
-        CB - The callback you specified when you sent a task 
-    */ 
 	
 	// Here's where you receive callbacks from running methods
     if(method$isCallback) {
-        
-        if ((CB == KCCellSaveCB$setupBoundaryCB) && (METHOD == KCCellSaveBoundaryMethod$setup)) {
-            BFL = BFL|BFL_BOUNDSSETUP;
-            
-            debugUncommon("setupBoundaryCB: " + method_arg(0));
-        }
-        else if ((CB == KCCellSaveCB$getBoundaryCB) && (METHOD == KCCellSaveBoundaryMethod$getBoundary)) {
-            
-            BFL = BFL|BFL_BOUNDS;
-            
-            debugUncommon("getBoundaryCB: " + method_arg(0));
-            
-            vector vec_Upper = (vector)method_arg(1);
-            vector vec_Lower = (vector)method_arg(2);
-            
-            KCCellSaveObjects$save( vec_Upper, vec_Lower, KCCellSaveCB$objectsSaveCB );
-            
-        }
-        else if ((CB == KCCellSaveCB$objectsSaveCB) && (METHOD == KCCellSaveObjectsMethod$save)) {
+        if ((CB == KCCellSaveCB$objectsSaveCB) && (METHOD == KCCellSaveObjectsMethod$save)) {
             BFL = (BFL&~BFL_SAVING)|BFL_OBJS;
             if((integer)method_arg(0) == 1) {
             
-                kcCBSimple$fireCB( ([TRUE, method_arg(1)]) );
+                kcCBSimple$fireCB( ([TRUE, method_arg(1), method_arg(2), method_arg(3)]) );
             }
             else {
                 kcCBSimple$fireCB( [FALSE] )
             }
         }
-        
         return;
     }
     
@@ -94,7 +67,11 @@ default
             debugUncommon("KCCellSaveMethod$save");
             
             BFL = BFL|BFL_SAVING;
-            KCCellSaveBoundary$getBoundary( KCCellSaveCB$getBoundaryCB );
+			
+			str_CellName = method_arg(0);
+            
+			KCCellSaveObjects$save( str_CellName, KCCellSaveCB$objectsSaveCB );
+			
             kcCBSimple$delayCB()
             return;
         }

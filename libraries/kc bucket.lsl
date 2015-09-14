@@ -2,11 +2,20 @@
 	Bucket Storage
 	"I needed a bigger bucket"
 	
-	Functions has massive WORM (write-one/read-many) list storage with minimal script memory requirements.
+	Functions has massive WORM (write-once/read-many) list storage with minimal script memory requirements.
 	Typically <2KB of stored data is in memory as a time. 
 	Estimated maximum capacity is 6,878KB with 255 db prims.
+	Multiple buckets can be open at a time a the cost of additional bytecode and runtime memory.
+	Data can optionally be addressed for seeking to specific stored elements on read.
 	
-	Warning: Unicode will cause problems without llEscapeURL first. MoaP data fields appears to be 7-bit.
+	Warning:
+		Unicode will cause problems without llEscapeURL first. MoaP data fields appears to be 7-bit.
+	
+	Caution:
+		The majority of this module is preproc macros and not subfunctions. Making multiple calls to
+		some methods can drastically increase the scripts bytecode.
+		KCbucket$write() is safe to call many times, KCbucket$varsWrite() creates a write function per bucket.
+		Only one instance of KCbucket$readAll() per bucket is advised, wrap it in a function if necessary.
 	
 	Write data to named bucket:
 		KCbucket$varsDB( bucket_name );
@@ -63,6 +72,7 @@
 // Variable names
 #define KCbucket$getPrefix( bucket_name ) 		CAT(pffsDBprefix_, bucket_name)
 #define KCbucket$getDB( bucket_name ) 			CAT(lst_PrimDB_, bucket_name)
+#define KCbucket$DBOK( bucket_name ) 			KCbucket$getDB(objcache) != []
 
 #define KCbucket$getWriteBlockAddress( bucket_name ) 	CAT(int_WriteBlockAddress_, bucket_name)
 #define KCbucket$getWriteBuffer( bucket_name ) 		CAT(str_Buffer_, bucket_name)
@@ -104,6 +114,10 @@
 #define _getDataAddress_Block( int_DataAddress ) (int_DataAddress >> 10)
 #define _getDataAddress_Offset( int_DataAddress ) (int_DataAddress & 0x3ff)
 
+
+#define KCbucket$getNumWrittenBlocks( bucket_name ) (KCbucket$getWriteBlockAddress(namecache)+1)
+#define KCbucket$getNumPrims( int_BlockNum ) llCeil(((float)int_BlockNum)/27.0)
+
 // Write
 #define _getBlockLinkNum( bucket_name, int_BlockAddress ) llList2Integer( KCbucket$getDB(bucket_name), llFloor(int_BlockAddress/27) )
 #define _getBlockFaceNum( int_BlockAddress ) (llFloor(int_BlockAddress/3)%9)
@@ -113,7 +127,6 @@
 #define _getBlockFaceNumCurrent( bucket_name ) (llFloor(KCbucket$getReadBlockAddress(bucket_name)/3)%9)
 #define _getBlockSectorCurrent( bucket_name ) (_getPrimMediaField(KCbucket$getReadBlockAddress(bucket_name)%3))
 
-#define _getBlockNumPrims( bucket_name ) (llCeil(KCbucket$getReadBlockAddress(bucket_name)/27.0))
 
 integer _getPrimMediaField( integer int_Index ) {
 	if (int_Index == 0) return PRIM_MEDIA_HOME_URL;
@@ -179,6 +192,13 @@ integer int_BlockPrim;
 #define KCbucket$writeGetNextAddress( bucket_name ) \
 	_getDataAddress( KCbucket$getWriteBlockAddress(bucket_name), llStringLength(KCbucket$getWriteBuffer(bucket_name)))
 
+
+#define KCbucket$getBlockNum( bucket_name ) \
+	(KCbucket$getWriteBlockAddress(bucket_name))
+
+#define KCbucket$getBlockNumPrims( bucket_name ) \
+	(llCeil(KCbucket$getWriteBlockAddress(bucket_name)/27.0))
+
 /*============
 	Read
 ============*/
@@ -224,9 +244,12 @@ integer int_bucketSeek;
 			);\
 		} else if (KCbucket$getReadBlockAddress(bucket_name) == KCbucket$getWriteBlockAddress(bucket_name)) {\
 			str_Data = KCbucket$getWriteBuffer(bucket_name) + KCbucket$Separator + "EOF";\
+			/*llOwnerSay("readNextOpen end");*/\
 		}\
 		KCbucket$getReadBlockAddress(bucket_name)++;\
+		/*llOwnerSay("readNextOpen read: " + str_Data);*/\
 		if (str_Data == "EOF" || str_Data == "") {\
+			/*llOwnerSay("readNextOpen EOF");*/\
 			KCbucket$getReadBuffer(bucket_name) += "EOF";\
 		} else {\
 			if (int_bucketSeek) {\
@@ -248,17 +271,17 @@ integer int_bucketSeek;
 }
 
 
-#define _readAll( method_read, bucket_name, str_Data, int_Processing, method_onEOF, method_onData ) {\
-	int_Processing = TRUE;\
+#define _readAll( method_read, bucket_name, str_Data, int_Run, method_onEOF, method_onData ) {\
+	int_Run = TRUE;\
 	do {\
 		method_read( bucket_name, str_Data )\
 		if (str_Data == "EOF") {\
 			method_onEOF;\
-			int_Processing = FALSE;\
+			int_Run = FALSE;\
 		} else {\
 			method_onData;\
 		}\
-	} while(int_Processing);\
+	} while(int_Run);\
 }
 
 #define KCbucket$readAll( ... ) \
@@ -266,7 +289,7 @@ integer int_bucketSeek;
 	
 #define KCbucket$readAllOpen( ... ) \
 	_readAll( KCbucket$readNextOpen, __VA_ARGS__ )
-
+	
 #define KCbucket$readSeek( bucket_name, int_DataAddress ) \
 	KCbucket$getReadBlockAddress(bucket_name) = _getDataAddress_Block(int_DataAddress); \
 	int_bucketSeek = _getDataAddress_Offset(int_DataAddress);\

@@ -22,6 +22,7 @@ TODO: Indexing objects and figuring out what goes where and how to find them lat
 #define SCRIPT_IS_ROOT
 #define USE_EVENTS
 #define USE_SHARED ["*"]
+#define DB2_PRESERVE_ON_RESET
 
 #include "../../_core.lsl"
 
@@ -48,16 +49,18 @@ string str_CellName;
 #define DIAG_TESTPOS 4
 #define DIAG_CELLNAME 5
 #define DIAG_EXTRA 6
-#define DAIG_REINIT 7
+#define DAIG_RESET 7
+#define DAIG_REINIT 8
 
 #define DiagMainMenuText ("Menu of the main.\nCell Name: " + str_CellName)
 #define DiagOptionsMessage ("Options:\nCell Name: " + str_CellName)
 
 #define CellDiag$Init() Dialog$spawn(llGetOwner(), "New cell, helpful text for initial setup will go here.", (["Initialize"]), DAIG_INIT, "")
-#define CellDiag$Main() Dialog$spawn(llGetOwner(), DiagMainMenuText, (["Save Cell", "Options"]), DIAG_ROOT, "")
+#define CellDiag$Main() Dialog$spawn(llGetOwner(), DiagMainMenuText, (["Save Cell", "Unique", "Index", "Options", "Reset Scripts"]), DIAG_ROOT, "")
 #define CellDiag$Options() Dialog$spawn(llGetOwner(), DiagOptionsMessage, (["Cell Name", "Reinitialize", "Back"]), DIAG_OPTIONS, "")
 #define CellDiag$CellName() Dialog$spawn(llGetOwner(), "Enter name for this cell:", [], DIAG_CELLNAME, "")
 #define CellDiag$Extra() Dialog$spawn(llGetOwner(), "This would be some other setup step.", ["Muffin"], DIAG_EXTRA, "")
+#define CellDiag$Reset() Dialog$spawn(llGetOwner(), "Reset scripts?", (["Yes", "Nope"]), DAIG_RESET, "")
 #define CellDiag$Reinitialize() Dialog$spawn(llGetOwner(), "Reinitialize? Are you sure?", (["Yes", "Nope"]), DAIG_REINIT, "")
 
 // Named timers
@@ -75,7 +78,7 @@ default
     {
         resetAllOthers();
 		initiateListen();
-        db2$index();
+        DB2$ini();
         // multiTimer([TIMER_DELAYED_STARTUP, "", 4, FALSE]);
         mem_usage();
     }
@@ -92,7 +95,10 @@ default
 		
         if (llDetectedLinkNumber(0) == LINK_ROOT) {
 			if (!BFL&BFL_INIT) {
-				if (KCCellData$getinit()) BFL = BFL|BFL_INIT;
+				if (KCCell$getinit()) {
+					BFL = BFL|BFL_INIT;
+					str_CellName = KCCell$getCellName();
+				}
 			}
 			
             if(BFL&BFL_BUSY) {
@@ -102,7 +108,6 @@ default
 				CellDiag$Init();
 			}
             else {
-                str_CellName = KCCellData$getCellName();
                 CellDiag$Main();
             }
         }
@@ -153,10 +158,19 @@ default
             else if(menu == DIAG_ROOT) {
                 if(message == "Save Cell") {
                     BFL = BFL|BFL_BUSY;
-					KCCellSave$save( KCCellSaveControllerCB$saveCellCB );
+					KCCellSave$save( str_CellName, KCCellSaveControllerCB$saveCellCB );
                 }
+				else if (message == "Unique") {
+					KCCellSaveObjectsUnique$buildUniquesList( KCCellSaveControllerCB$uniqueCellCB );
+				}
+				else if (message == "Index") {
+					KCCellSaveIndexer$index( str_CellName, KCCellSaveControllerCB$indexCellCB );
+				}
                 else if(message == "Options") {
                     CellDiag$Options();
+                }
+                else if(message == "Reset Scripts") {
+                    CellDiag$Reset();
                 }
             }
             else if (menu == DIAG_OPTIONS) {
@@ -166,13 +180,13 @@ default
                 else if(message == "Reinitialize") CellDiag$Reinitialize();
             }
             else if (menu == DIAG_CELLNAME) {
-                string str_CellName = tr(message);
-				if(~llSubStringIndex(str_CellName," ")) {
+				if(~llSubStringIndex(tr(message)," ")) {
 					debugRare("ERROR: Cell name cannot contain white space.");
 					CellDiag$CellName();
 					return;
 				}
-                KCCellData$setCellName( str_CellName );
+				str_CellName = tr(message);
+                KCCell$setCellName( str_CellName );
                 debugUncommon("Cell name set to: " + str_CellName);
 				BFL = BFL|BFL_NAMED;
                 if (BFL&BFL_INIT) CellDiag$Options();
@@ -187,6 +201,13 @@ default
                 debugUncommon("Code purple: Muffin.");
 				BFL = BFL|BFL_EXTRA;
                 if (BFL&BFL_INIT) CellDiag$Options();
+            }
+			
+			// Reset Scripts
+            else if (menu == DAIG_RESET) {
+                if(message == "Yes") {
+					llResetScript();
+				}
             }
 			
 			// Reinitialize
@@ -208,7 +229,7 @@ default
 				}
 				else {
 					BFL = BFL|BFL_INIT;
-					KCCellData$setinit(TRUE);
+					KCCell$setinit(TRUE);
 					Dialog$spawn(llGetOwner(), "Initialization completed.", (["OK"]), DAIG_NOTHINGSPECIAL, "");
 				}
 			}
@@ -216,10 +237,22 @@ default
 		
         else if (CB == KCCellSaveControllerCB$saveCellCB && METHOD == KCCellSaveMethod$save) {
             string msg;
-            if((integer)method_arg(0) == 1) msg = "Save completed.\nObjs saved: "+method_arg(1);
+            if((integer)method_arg(0) == 1) msg = "Save completed.\nObjs saved: "+method_arg(1)+"\nData length: "+method_arg(2)+"\nData Prims: "+method_arg(3);
             else msg = "Save failed.";
             Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
         }
+        else if (CB == KCCellSaveControllerCB$uniqueCellCB && METHOD == KCCellSaveObjectsUniqueMethod$buildUniquesList ) {
+            string msg;
+            if((integer)method_arg(0) == 1) msg = "Unique list completed.\n# Unique Objects: "+method_arg(1)+"\nData length: "+method_arg(2)+"\nData Prims: "+(string)KCbucket$getNumPrims(method_arg(2));
+            else msg = "Unique list failed.";
+            Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
+		}
+        else if (CB == KCCellSaveControllerCB$indexCellCB && METHOD == KCCellSaveIndexerMethod$index ) {
+            string msg;
+            if((integer)method_arg(0) == 1) msg = "Index completed.\n# Data length: "+method_arg(1)+"\nData Prims: "+method_arg(2);
+            else msg = "Index failed.";
+            Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
+		}
         return;
     }
     
