@@ -115,7 +115,7 @@
 #define _getDataAddress_Offset( int_DataAddress ) (int_DataAddress & 0x3ff)
 
 
-#define KCbucket$getNumWrittenBlocks( bucket_name ) (KCbucket$getWriteBlockAddress(namecache)+1)
+#define KCbucket$getNumWrittenBlocks( bucket_name ) (KCbucket$getWriteBlockAddress(bucket_name)+1)
 #define KCbucket$getNumPrims( int_BlockNum ) llCeil(((float)int_BlockNum)/27.0)
 
 // Write
@@ -276,10 +276,10 @@ integer int_bucketSeek;
 	do {\
 		method_read( bucket_name, str_Data )\
 		if (str_Data == "EOF") {\
-			method_onEOF;\
+			method_onEOF\
 			int_Run = FALSE;\
 		} else {\
-			method_onData;\
+			method_onData\
 		}\
 	} while(int_Run);\
 }

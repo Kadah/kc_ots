@@ -238,19 +238,19 @@ default
         else if (CB == KCCellSaveControllerCB$saveCellCB && METHOD == KCCellSaveMethod$save) {
             string msg;
             if((integer)method_arg(0) == 1) msg = "Save completed.\nObjs saved: "+method_arg(1)+"\nData length: "+method_arg(2)+"\nData Prims: "+method_arg(3);
-            else msg = "Save failed.";
+            else msg = "Save failed. " + method_arg(1);
             Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
         }
         else if (CB == KCCellSaveControllerCB$uniqueCellCB && METHOD == KCCellSaveObjectsUniqueMethod$buildUniquesList ) {
             string msg;
             if((integer)method_arg(0) == 1) msg = "Unique list completed.\n# Unique Objects: "+method_arg(1)+"\nData length: "+method_arg(2)+"\nData Prims: "+(string)KCbucket$getNumPrims(method_arg(2));
-            else msg = "Unique list failed.";
+            else msg = "Unique list failed. " + method_arg(1);
             Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
 		}
         else if (CB == KCCellSaveControllerCB$indexCellCB && METHOD == KCCellSaveIndexerMethod$index ) {
             string msg;
             if((integer)method_arg(0) == 1) msg = "Index completed.\n# Data length: "+method_arg(1)+"\nData Prims: "+method_arg(2);
-            else msg = "Index failed.";
+            else msg = "Index failed. " + method_arg(1);
             Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
 		}
         return;

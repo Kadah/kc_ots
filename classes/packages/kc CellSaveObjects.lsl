@@ -51,7 +51,7 @@ default
         
 		// Store general details about objects in this cell
         KCCell$setNumObjs( G_int_NumObjs );
-        // KCCell$setCellDataLength( G_int_DataIndex );
+        KCCell$setCellDataLength( KCbucket$getNumWrittenBlocks(objcache) );
         
         mem_usage();
 		

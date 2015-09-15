@@ -1,4 +1,4 @@
-﻿/*
+/*
 Cell Save: Indexer
 
 	Basic theory of operation of this is to take the following stored info from the cache:
@@ -20,6 +20,8 @@ Cell Save: Indexer
 #include "../../_core.lsl"
 
 
+kcCBSimple$vars;
+
 integer BFL;
 #define BFL_PROCESSING 0x1
 #define BFL_DONE 0x2
@@ -34,6 +36,7 @@ integer int_NumObjects;
 
 // Stats and processing
 integer int_Cycles;
+integer int_TotalCycles;
 integer int_StartTime;
 integer int_ObjNum;
 integer int_UniqueObjNum;
@@ -44,20 +47,17 @@ string str_ObjectClass;
 string str_ObjectName;
 list lst_ObjData;
 string str_Data;
-string str_LastObjName;
-integer int_Searching;
-integer int_IsUnique;
+string str_CurrentObjName;
+integer int_SubProcessing;
 
 KCbucket$varsDB( objcache );
 KCbucket$varsDB( namecache );
-KCbucket$varsDB( idcache );
+KCbucket$varsDB( export );
 
 KCbucket$varsRead( objcache );
 KCbucket$varsRead( namecache );
 
-KCbucket$varsWrite( namecache );
-KCbucket$varsWrite( idcache );
-
+KCbucket$varsWrite( export );
 
 #define _setProgress( str_Text ) llSetText( str_Text, ZERO_VECTOR, 1 )
 
@@ -73,7 +73,7 @@ default
     
     if(method$byOwner) {
         
-        if(METHOD == KCCellSaveObjectsUniqueMethod$buildUniquesList) {
+        if(METHOD == KCCellSaveIndexerMethod$index) {
 			if(!(BFL&BFL_PROCESSING)) {
 				
 				// Get cell info
@@ -81,11 +81,11 @@ default
 				int_NumObjects = KCCell$getNumObjs();
 				int_InputDataLength = KCCell$getCellDataLength();
 				
-				debugUncommon("=Finding unique objects for CellName: " + str_CellName + ", objs: " + (string)int_NumObjects + ", input data length: " + (string)int_InputDataLength);
+				debugUncommon("=Indexing CellName: " + str_CellName + ", objs: " + (string)int_NumObjects + ", data length: " + (string)int_InputDataLength);
 				
 				// Only run if there is something to do
 				if (str_CellName != "" && int_InputDataLength > 0 && int_NumObjects > 0) {
-					debugUncommon("Finding unique objects for CellName: " + str_CellName + ", objs: " + (string)int_NumObjects + ", input data length: " + (string)int_InputDataLength);
+					debugUncommon("Indexing CellName: " + str_CellName + ", objs: " + (string)int_NumObjects + ", data length: " + (string)int_InputDataLength);
 					
 					BFL = BFL_PROCESSING;
 					llScriptProfiler(PROFILE_SCRIPT_MEMORY);
@@ -94,80 +94,66 @@ default
 					
 					//Reset all variables
 					int_Cycles = 0;
-					str_LastObjName = "";
-					KCbucket$writeSeek( namecache, 0 );
-					KCbucket$writeSeek( idcache, 0 );
+					KCbucket$writeSeek( export, 0 );
 					
 					KCbucket$initDB( objcache, "CD", FALSE );
-					KCbucket$initDB( namecache, "ND", TRUE );
-					KCbucket$initDB( idcache, "ID", TRUE );
+					KCbucket$initDB( namecache, "ND", FALSE );
+					KCbucket$initDB( export, "ID", TRUE );
 					
-					// Find unique objects by name
-					KCbucket$readSeek( objcache, 0 );
-					int_Processing = TRUE;
-					do {
-						int_Cycles++;
-						KCbucket$readNext( objcache, str_Data );
-						if (str_Data == "EOF") {
-							KCbucket$writeClose( namecache );
-							KCbucket$writeClose( idcache );
-							int_Processing = FALSE;
-						}
-						else {
+					KCbucket$readSeek( namecache, 0 );
+					KCbucket$readAll( namecache, str_CurrentObjName, int_Processing, 
+						KCbucket$writeClose( export );,
+						// Write object name to export db
+						KCbucket$write( export, llList2Json(JSON_ARRAY, [
+							"OBJNAME",
+							str_CurrentObjName
+						]));
+						// Write object details for matching objects
+						KCbucket$readSeek( objcache, 0 );
+						KCbucket$readAll( objcache, str_Data, int_SubProcessing, ,
+							int_Cycles++;
 							lst_ObjData = llJson2List(str_Data);
 							str_ObjectClass	= llList2String( lst_ObjData, 0 );
 							if (str_ObjectClass == "OBJ") {
-								int_ObjNum++;
 								str_ObjectName 	= llList2String( lst_ObjData, 1 );
-								if (str_ObjectName != str_LastObjName) {
-									int_IsUnique = TRUE;
-									KCbucket$readSeek( namecache, 0 );
-									KCbucket$readAllOpen( namecache, str_Data, int_Searching, ,
-										int_Cycles++;
-										if (str_ObjectName == str_Data) {
-											int_IsUnique = FALSE;
-											int_Searching = FALSE;
-										}
-									);
-									if (int_IsUnique) {
-										str_LastObjName = str_ObjectName;
-										KCbucket$write( namecache, str_ObjectName );
-										KCbucket$write( idcache, llList2String(lst_ObjData, 2) );
-										int_UniqueObjNum++;
-									}
+								if (str_ObjectName == str_CurrentObjName) {
+									str_Data = llList2Json(JSON_ARRAY, [
+										"OBJ",
+										llList2String( lst_ObjData, 3 ), // str_ObjectData
+										llList2String( lst_ObjData, 4 ) // str_ExtraData
+									]);
+									KCbucket$write( export, str_Data );
+									int_ObjNum++;
 								}
 							}
-							// Update progress text every 4 steps
-							if ((int_ObjNum % 4) == 0) {
-								_setProgress(
-									// Tick arrow spin once every 4 steps (8*4=32)
-									KCLib$progressArrowSpin( int_ObjNum, 32 ) +
-									" Processing uniques " +
-									KCLib$progressPie( ((float)int_ObjNum / (float)int_NumObjects) ) + "\n" +
-									(string)int_UniqueObjNum + " unique objects found\n \n "
-								);
-							}
+						);
+						
+						// Update progress text every 4 steps
+						if ((int_ObjNum % 4) == 0) {
+							_setProgress(
+								// Tick arrow spin once every 4 steps (8*4=32)
+								KCLib$progressArrowSpin( int_ObjNum, 32 ) +
+								" Indexing objects " +
+								KCLib$progressPie( ((float)int_ObjNum / (float)int_NumObjects) ) + "\n" +
+								(string)int_ObjNum + " objects indexed\n \n "
+							);
 						}
-					} while(int_Processing && int_Cycles < int_MaxCycles);
+					);
 					
-					_setProgress( (string)int_UniqueObjNum + " unique objects found\n" );
-					
-					llOwnerSay("Unique Objects:");
-					KCbucket$readAll( namecache, str_Data, int_Processing, , llOwnerSay(str_Data););
+					_setProgress( (string)int_ObjNum + " objects indexed\n" );
 					
 					llScriptProfiler(PROFILE_NONE);
 					debugUncommon(
-						"Runtime: " + (string)(llGetUnixTime() - int_StartTime) + " seconds." +
-						" Cycles: " + (string)int_Cycles +
+						"Index runtime: " + (string)(llGetUnixTime() - int_StartTime) + " seconds." +
+						"\nCycles: " + (string)int_Cycles +
 						"\nMax mem: " + (string)llGetSPMaxMemory() + " bytes" +
 						"\nObj num: " + (string)int_ObjNum +
-						"\nUnique obj num: " + (string)int_UniqueObjNum +
 						"\nData in: " + (string)int_InputDataLength +
-						"\nData blocks: " + (string)KCbucket$getNumWrittenBlocks(namecache)
+						"\nData blocks: " + (string)KCbucket$getNumWrittenBlocks(export)
 					);
 					
 					BFL = (BFL&~BFL_PROCESSING);
-					CB_DATA = [TRUE, int_UniqueObjNum, KCbucket$getNumWrittenBlocks(namecache)];
+					CB_DATA = [TRUE, int_ObjNum, KCbucket$getNumWrittenBlocks(export)];
 				}
 				else {
 					CB_DATA = [FALSE, "NOWORK"];
@@ -177,8 +163,12 @@ default
 				CB_DATA = [FALSE, "BUSY"];
 			}
 		}
+        
     }
 	
+	// Public code can be put here
+
+    // End link message code
     #define LM_BOTTOM  
     #include "xobj_core/_LM.lsl"  
 }
