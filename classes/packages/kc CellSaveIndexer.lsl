@@ -98,7 +98,7 @@ default
 					
 					KCbucket$initDB( objcache, "CD", FALSE );
 					KCbucket$initDB( namecache, "ND", FALSE );
-					KCbucket$initDB( export, "ID", TRUE );
+					KCbucket$initDB( export, "ED", TRUE );
 					
 					KCbucket$readSeek( namecache, 0 );
 					KCbucket$readAll( namecache, str_CurrentObjName, int_Processing, 
