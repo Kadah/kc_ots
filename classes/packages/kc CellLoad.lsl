@@ -62,8 +62,10 @@ default
     if(method$isCallback) {
         
         if ((CB == KCCellLoadCB$objectLoadCB) && (METHOD == KCCellLoadObjectsMethod$load)) {
-            BFL = BFL|BFL_OBJS;
+            // BFL = BFL|BFL_OBJS;
             
+			BFL = (BFL&~BFL_LOADING);
+			
             debugUncommon("objectLoadCB: " + method_arg(0));
             
             if((integer)method_arg(0) == 1) {
@@ -89,9 +91,15 @@ default
             debugUncommon("KCCellLoadMethod$load");
             
             BFL = BFL|BFL_LOADING;
-            integer int_Flags = (integer)method_arg(0);
+			
+            string str_CellName = method_arg(0);
             vector vec_Pos = (vector)method_arg(1);
-            KCCellLoadObjects$load( int_Flags, vec_Pos, KCCellLoadCB$objectLoadCB );
+			
+			//TODO: temp hack
+			string str_DataAddress = KCbucket$dataAddress_Encode( 0 );
+			rotation rot_Rot = ZERO_ROTATION;
+			
+            KCCellLoadObjects$load( str_DataAddress, vec_Pos, rot_Rot , KCCellLoadCB$objectLoadCB );
             
             kcCBSimple$delayCB()
             return;

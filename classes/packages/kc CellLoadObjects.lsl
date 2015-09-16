@@ -23,45 +23,28 @@ kcCBSimple$vars;
 list G_lst_SpawnHubs; // [ str_SpawnHubName, str_SpawnHubUUID ]
 list G_lst_SpawnHubsWaiting; // [ str_SpawnHubName ]
 
+list G_lst_BlockDB;
+
 integer G_int_LoadFlag;
 vector G_vec_Pos;
 integer G_int_NumObjs;
 integer G_int_NumObjsLoaded;
-integer G_int_DataIndex;
-integer G_int_DataIndexEnd;
-list G_lst_ObjData;
 
 
-list readNextObject() {
-    if ((llGetListLength(G_lst_ObjData) < 2) && (G_int_DataIndex <= G_int_DataIndexEnd)) {
-        string str_RezData = llList2String(G_lst_ObjData, 0) + (string)llGetLinkMedia(llList2Integer(G_lst_BlockDB, llFloor(G_int_DataIndex/9)), (G_int_DataIndex%9), [PRIM_MEDIA_HOME_URL, PRIM_MEDIA_CURRENT_URL, PRIM_MEDIA_WHITELIST]);
-        G_int_DataIndex++;
-        G_lst_ObjData = llParseString2List(str_RezData, [";"], []);
-        // debugUncommon("G_int_DataIndex: " + (string)G_int_DataIndex + " G_lst_ObjData: " + llDumpList2String(G_lst_ObjData, ", "));
-    }
-    if (llGetListLength(G_lst_ObjData) == 0) {
-        debugUncommon("Reached end of data");
-        return [];
-    }
-    
-    string str_ObjData = llList2String(G_lst_ObjData, 0);
-    
-    // LSL is stupid
-    if (llGetListLength(G_lst_ObjData) > 1) { G_lst_ObjData = llList2List(G_lst_ObjData, 1, -1);}
-    else { G_lst_ObjData = [];}
-    
-    string str_ObjectName = llGetSubString( str_ObjData, 0, -43 );    
-    vector vec_Pos = KCLib$base64ToVector( str_ObjData, -42 );
-    rotation rot_Rot = KCLib$base64ToRotation( str_ObjData, -24 );
-    
-    vector vec_RootPos = llGetRootPosition();
-    vec_Pos = vec_Pos + G_vec_Pos;
-    
-    G_int_NumObjsLoaded++;
-    
-    return [ str_ObjectName, vec_Pos, rot_Rot ];
+// Loading state vars
+string str_ObjectName;
+
+
+//TODO: temp hacks
+KCbucket$varsDB( export );
+KCbucket$varsRead( export );
+
+
+string readNext() {
+    string str_Data;
+	KCbucket$readNext( export, str_Data );
+	return str_Data;
 }
-
 
 loadBatchAndRezObjects() {
     // if (!BFL&BFL_LOADING) {return;}
@@ -82,21 +65,47 @@ loadBatchAndRezObjects() {
         // for(i=0; ; i++) {
         while (BFL&BFL_LOADING && i < BATCH_LOAD_SIZE) {
             i++;
-            lst_ObjData = readNextObject();
-            if (lst_ObjData == []) {
+			
+			
+            string str_Data = readNext();
+			
+            if (str_Data == "EOF") {
                 debugUncommon("Out of data");
                 BFL = (BFL&~BFL_LOADING)|BFL_DONELOADING_WAITFORREZ;
             }
-            else {
-                // debugUncommon("loadAndRezObjs: " + (string)G_int_NumObjsLoaded + "/" + (string)G_int_NumObjs);
-                // debugUncommon("ObjData: " + llDumpList2String(lst_ObjData, ", "));
-                lst_ObjDataRez += lst_ObjData;
-            }
+			
+			else {
+				list lst_ObjData = llJson2List(str_Data);
+				string str_ObjectClass	= llList2String( lst_ObjData, 0 );
+				
+				// Object name change
+				if (str_ObjectClass == "OBJNAME") {
+					str_ObjectName 	= llList2String( lst_ObjData, 1 );
+				}
+				
+				// Object
+				else if (str_ObjectClass == "OBJ") {
+					G_int_NumObjsLoaded++;
+					
+					string str_ObjectData 	= llList2String( lst_ObjData, 1 );
+					string str_ExtraData 	= llList2String( lst_ObjData, 2 );
+					
+					// QTehIAPzwtAAQGd+AAAAAAAAvgWopwAAAAAAP33PVQ
+					vector vec_Pos = KCLib$base64ToVector( str_ObjectData, -42 );
+					rotation rot_Rot = KCLib$base64ToRotation( str_ObjectData, -24 );
+					
+					vector vec_RootPos = llGetRootPosition();
+					vec_Pos = vec_Pos + G_vec_Pos;
+					
+					lst_ObjDataRez +=  [ str_ObjectName, vec_Pos, rot_Rot, str_ExtraData ];
+				
+				}
+			}
         }
         
         if (lst_ObjDataRez != []) {
-            // debugUncommon("ObjDataRez: " + llDumpList2String(lst_ObjDataRez, ", "));
-            KCSpawnHub$rezObjectList(str_SpawnHubUUID, llList2Json(JSON_ARRAY, lst_ObjDataRez), G_int_LoadFlag, cls$name, KCCellLoadObjectsCB$loadingRezCB);
+            debugUncommon("ObjDataRez: " + llDumpList2String(lst_ObjDataRez, ", "));
+            //KCSpawnHub$rezObjectList(str_SpawnHubUUID, llList2Json(JSON_ARRAY, lst_ObjDataRez), G_int_LoadFlag, cls$name, KCCellLoadObjectsCB$loadingRezCB);
         }
     }
     else {
@@ -121,6 +130,7 @@ default
 	// Start up the script
     state_entry() {
 		mem_usage();
+		DB2$ini();
     }
     
 	// Timer event
@@ -222,18 +232,17 @@ default
             debugUncommon("Loading cell");
             BFL = BFL|BFL_LOADING;
             
-            updateBlockDBPrims(FALSE);
-            debugUncommon("G_lst_BlockDB: " + llDumpList2String(G_lst_BlockDB, ", "));
             
-            G_int_LoadFlag = (integer)method_arg(0);
+            string str_DataAddress = method_arg(0);
             G_vec_Pos = (vector)method_arg(1);
+            rotation rot_Rot = (rotation)method_arg(2);
             G_int_NumObjsLoaded = 0;
-            G_int_DataIndex = 0;
-            G_lst_ObjData       = [];
-            G_int_NumObjs       = KCCell$getNumObjs();
-            G_int_DataIndexEnd  = KCCell$getCellDataEnd();
+			
+			//TODO: Temp hacks
+            KCbucket$initDB( export, "ED", TRUE );
+			KCbucket$readSeek( export, KCbucket$dataAddress_Decode(str_DataAddress) );
             
-            debugUncommon("NumObjs: "+(string)G_int_NumObjs + " DataEnd: "+(string)G_int_DataIndexEnd + " Pos: " + (string)G_vec_Pos);
+            // G_int_NumObjs       = KCCell$getNumObjs();
             
             kcCBSimple$delayCB();
             

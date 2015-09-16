@@ -6,7 +6,7 @@
 
 
 
-#define KCCellLoad$load( int_Flags, vec_Pos, cb ) runMethod((string)LINK_THIS, "kc CellLoad", KCCellLoadMethod$load, ([int_Flags, vec_Pos]), cb)
+#define KCCellLoad$load( str_CellName, vec_Pos, cb ) runMethod((string)LINK_THIS, "kc CellLoad", KCCellLoadMethod$load, ([str_CellName, vec_Pos]), cb)
 
 
 
