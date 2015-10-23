@@ -215,7 +215,7 @@ integer int_bucketSeek;
 			_getBlockFaceNumCurrent(bucket_name),\
 			[_getBlockSectorCurrent(bucket_name)]\
 		);\
-		str_Data = llGetSubString(str_Data,0,KCbucket$BlockSizeLessOne);\
+		str_Data = llGetSubString(str_Data,0,-2);\
 		KCbucket$getReadBlockAddress(bucket_name)++;\
 		if (str_Data == "EOF" || str_Data == "") {\
 			KCbucket$getReadBuffer(bucket_name) += "EOF";\
@@ -247,15 +247,12 @@ integer int_bucketSeek;
 				_getBlockFaceNumCurrent(bucket_name),\
 				[_getBlockSectorCurrent(bucket_name)]\
 			);\
-			str_Data = llGetSubString(str_Data,0,KCbucket$BlockSizeLessOne);\
+			str_Data = llGetSubString(str_Data,0,-2);\
 		} else if (KCbucket$getReadBlockAddress(bucket_name) == KCbucket$getWriteBlockAddress(bucket_name)) {\
 			str_Data = KCbucket$getWriteBuffer(bucket_name) + KCbucket$Separator + "EOF";\
-			/*llOwnerSay("readNextOpen end");*/\
 		}\
 		KCbucket$getReadBlockAddress(bucket_name)++;\
-		/*llOwnerSay("readNextOpen read: " + str_Data);*/\
 		if (str_Data == "EOF" || str_Data == "") {\
-			/*llOwnerSay("readNextOpen EOF");*/\
 			KCbucket$getReadBuffer(bucket_name) += "EOF";\
 		} else {\
 			if (int_bucketSeek) {\
