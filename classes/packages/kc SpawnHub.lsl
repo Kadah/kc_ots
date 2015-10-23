@@ -63,7 +63,7 @@ default
         initiateListen();
         #endif
         
-        string str_SpawnHubName = llGetObjectName();
+        string str_SpawnHubName = llGetObjectDesc();
         debugUncommon("KCSpawnHub - state_entry: " + str_SpawnHubName);
         
         // Kill other instances
@@ -186,7 +186,7 @@ default
 	// ByOwner means the method was run by the owner of the prim
     if(method$byOwner) {
         if(METHOD == KCSpawnHubMethod$ping) {
-            string str_SpawnHubName = llGetObjectName();
+            string str_SpawnHubName = llGetObjectDesc();
             // debugUncommon("KCSpawnHubMethod$ping: " + str_SpawnHubName);
             // KCRez$rezSpawnHubCB(str_SpawnHubName);
             // return;
@@ -198,7 +198,7 @@ default
             string str_SpawnHubName = method_arg(0);
             // debugUncommon("KCSpawnHubMethod$remove: " + str_SpawnHubName);
             // Kills spawn hub is wildcard or name match. Cannot delete itself (allows it to remove all others).
-            if ((str_SpawnHubName == "*") || ((str_SpawnHubName == llGetObjectName()) && (id != llGetKey()))) {
+            if ((str_SpawnHubName == "*") || ((str_SpawnHubName == llGetObjectDesc()) && (id != llGetKey()))) {
                 llDie();
             }
         }
@@ -230,7 +230,7 @@ default
                     _REZ_QUEUE += [ str_ObjectName, vec_Pos, rot_Rot, int_Flags, delayed_cb_data ];
                 #endif
                 
-                // debugUncommon("KCSpawnHubMethod$rezObject: " + llGetObjectName() + " - queued - Object: " + str_ObjectName + " - FinalPos: " + method_arg(1));
+                // debugUncommon("KCSpawnHubMethod$rezObject: " + llGetObjectDesc() + " - queued - Object: " + str_ObjectName + " - FinalPos: " + method_arg(1));
                 
             }
             runQueue();
