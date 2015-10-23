@@ -51,17 +51,27 @@ string str_CellName;
 #define DIAG_EXTRA 6
 #define DAIG_RESET 7
 #define DAIG_REINIT 8
+//Packager
+#define DIAG_PACKAGEFOLDER 9
+#define DIAG_PACKAGESTART 10
+#define DIAG_PACKAGEEND 11
 
 #define DiagMainMenuText ("Menu of the main.\nCell Name: " + str_CellName)
 #define DiagOptionsMessage ("Options:\nCell Name: " + str_CellName)
 
 #define CellDiag$Init() Dialog$spawn(llGetOwner(), "New cell, helpful text for initial setup will go here.", (["Initialize"]), DAIG_INIT, "")
-#define CellDiag$Main() Dialog$spawn(llGetOwner(), DiagMainMenuText, (["Save Cell", "Unique", "Index", "Options", "Reset Scripts"]), DIAG_ROOT, "")
+#define CellDiag$Main() Dialog$spawn(llGetOwner(), DiagMainMenuText, (["Load", "Package", "2", "Save Cell", "Unique", "Index", "Options", "Reset Scripts"]), DIAG_ROOT, "")
 #define CellDiag$Options() Dialog$spawn(llGetOwner(), DiagOptionsMessage, (["Cell Name", "Reinitialize", "Back"]), DIAG_OPTIONS, "")
 #define CellDiag$CellName() Dialog$spawn(llGetOwner(), "Enter name for this cell:", [], DIAG_CELLNAME, "")
 #define CellDiag$Extra() Dialog$spawn(llGetOwner(), "This would be some other setup step.", ["Muffin"], DIAG_EXTRA, "")
 #define CellDiag$Reset() Dialog$spawn(llGetOwner(), "Reset scripts?", (["Yes", "Nope"]), DAIG_RESET, "")
 #define CellDiag$Reinitialize() Dialog$spawn(llGetOwner(), "Reinitialize? Are you sure?", (["Yes", "Nope"]), DAIG_REINIT, "")
+
+// Packager
+#define CellDiag$PackageAcceptFolder() Dialog$spawn(llGetOwner(), "Accept folder then press OK", (["OK"]), DIAG_PACKAGEFOLDER, "")
+#define CellDiag$PackageStart( str_Cmd ) Dialog$spawn(llGetOwner(), "Say the following line in local chat then press OK:\n" + str_Cmd, (["OK"]), DIAG_PACKAGESTART, "")
+#define CellDiag$PackageEnd() Dialog$spawn(llGetOwner(), "Press OK after process has finished. \"Packager finished\" message will appear in local chat when it is done.", (["OK"]), DIAG_PACKAGEEND, "")
+
 
 // Named timers
 // #define TIMER_DELAYED_STARTUP "st"
@@ -76,9 +86,9 @@ default
 	// Start up the script
     state_entry()
     {
+        DB2$ini();
         resetAllOthers();
 		initiateListen();
-        DB2$ini();
         // multiTimer([TIMER_DELAYED_STARTUP, "", 4, FALSE]);
         mem_usage();
     }
@@ -98,7 +108,9 @@ default
 				if (KCCell$getinit()) {
 					BFL = BFL|BFL_INIT;
 					str_CellName = KCCell$getCellName();
+					llOwnerSay("Got init for cell: " + str_CellName);
 				}
+				llOwnerSay("Init: " + (string)KCCell$getinit());
 			}
 			
             if(BFL&BFL_BUSY) {
@@ -166,6 +178,12 @@ default
 				else if (message == "Index") {
 					KCCellSaveIndexer$index( str_CellName, KCCellSaveControllerCB$indexCellCB );
 				}
+				else if (message == "Load") {
+					KCCellLoad$load( str_CellName, (llGetRootPosition()+(VEC_UP*10)), KCCellSaveControllerCB$loadCellCB );
+				}
+				else if (message == "Package") {
+					KCCellCellPackager$giveFolder( KCCellSaveControllerCB$packageFolderCB );
+				}
                 else if(message == "Options") {
                     CellDiag$Options();
                 }
@@ -202,6 +220,17 @@ default
 				BFL = BFL|BFL_EXTRA;
                 if (BFL&BFL_INIT) CellDiag$Options();
             }
+			
+			//Package
+			else if (menu == DIAG_PACKAGEFOLDER) {
+				KCCellCellPackager$start( KCCellSaveControllerCB$packageStartCB );
+			}
+			else if (menu == DIAG_PACKAGESTART) {
+				KCCellCellPackager$run( KCCellSaveControllerCB$packageRunCB );
+			}
+			else if (menu == DIAG_PACKAGEEND) {
+				KCCellCellPackager$end( KCCellSaveControllerCB$packageEndCB );
+			}
 			
 			// Reset Scripts
             else if (menu == DAIG_RESET) {
@@ -253,6 +282,48 @@ default
             else msg = "Index failed. " + method_arg(1);
             Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
 		}
+		
+        else if (CB == KCCellSaveControllerCB$loadCellCB && METHOD == KCCellLoadMethod$load ) {
+            string msg;
+            if((integer)method_arg(0) == 1)
+				msg = "Test load completed.";
+            else
+				msg = "Test load failed. " + method_arg(1);
+            Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
+		}
+		
+		// Packager
+        else if (CB == KCCellSaveControllerCB$packageFolderCB && METHOD == KCCellPackagerMethod$giveFolder ) {
+            if((integer)method_arg(0) == 1) {
+				CellDiag$PackageAcceptFolder();
+			}
+            else {
+				Dialog$spawn(llGetOwner(), ("Packager folder failed. " + method_arg(1)), (["OK"]), DAIG_PROCESSCOMPLETE, "");
+			}
+		}
+        else if (CB == KCCellSaveControllerCB$packageStartCB && METHOD == KCCellPackagerMethod$start ) {
+            if((integer)method_arg(0) == 1)
+				CellDiag$PackageStart(method_arg(1));
+            else {
+				Dialog$spawn(llGetOwner(), ("Packager start failed. " + method_arg(1)), (["OK"]), DAIG_PROCESSCOMPLETE, "");
+			}
+		}
+        else if (CB == KCCellSaveControllerCB$packageRunCB && METHOD == KCCellPackagerMethod$run ) {
+            if((integer)method_arg(0) == 1)
+				CellDiag$PackageEnd();
+            else {
+				Dialog$spawn(llGetOwner(), ("Packager run failed. " + method_arg(1)), (["OK"]), DAIG_PROCESSCOMPLETE, "");
+			}
+		}
+        else if (CB == KCCellSaveControllerCB$packageEndCB && METHOD == KCCellPackagerMethod$end ) {
+            string msg;
+            if((integer)method_arg(0) == 1)
+				msg = "Packager end completed.\n" + method_arg(1);
+            else
+				msg = "Packager end failed. " + method_arg(1);
+			Dialog$spawn(llGetOwner(), msg, (["OK"]), DAIG_PROCESSCOMPLETE, "");
+		}
+		
         return;
     }
     

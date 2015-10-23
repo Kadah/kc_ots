@@ -6,6 +6,13 @@
 #define KCCellSaveControllerCB$saveCellCB "Cs"
 #define KCCellSaveControllerCB$uniqueCellCB "Cu"
 #define KCCellSaveControllerCB$indexCellCB "Ci"
+#define KCCellSaveControllerCB$packageFolderCB "Cpf"
+#define KCCellSaveControllerCB$packageStartCB "Cps"
+#define KCCellSaveControllerCB$packageRunCB "Cpr"
+#define KCCellSaveControllerCB$packageEndCB "Cpe"
+
+//TODO: temp testing
+#define KCCellSaveControllerCB$loadCellCB "Cl"
 
 
 
