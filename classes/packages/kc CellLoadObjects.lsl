@@ -33,6 +33,7 @@ integer G_int_NumObjsLoaded;
 
 // Loading state vars
 string str_ObjectName;
+string str_SpawnHubName;
 
 
 //TODO: temp hacks
@@ -43,77 +44,72 @@ KCbucket$varsRead( export );
 string readNext() {
     string str_Data;
 	KCbucket$readNext( export, str_Data );
+	llOwnerSay("readNext: " + str_Data);
 	return str_Data;
 }
 
 loadBatchAndRezObjects() {
-    // if (!BFL&BFL_LOADING) {return;}
-    
-    if (G_int_NumObjsLoaded < G_int_NumObjs) {
-        string str_SpawnHubName = "LV Hall 1.0 Spawn Hub";
-        integer pos = llListFindList(G_lst_SpawnHubs, [str_SpawnHubName]);
-        if(pos == -1) {
-            debugRare("ERROR: Spawn hub not found.");
-            BFL = BFL&~BFL_LOADING;
-            return;
-        }
-        string str_SpawnHubUUID = llList2String(G_lst_SpawnHubs, pos+1 );
+    if (!BFL&BFL_LOADING) {return;}
         
-        list lst_ObjData;
-        list lst_ObjDataRez;
-        integer i;
-        // for(i=0; ; i++) {
-        while (BFL&BFL_LOADING && i < BATCH_LOAD_SIZE) {
-            i++;
+	list lst_ObjData;
+	list lst_ObjDataRez;
+	integer int_Cycle;
+	while (BFL&BFL_LOADING && int_Cycle < BATCH_LOAD_SIZE) {
+		
+		string str_Data = readNext();
+		
+		if (str_Data == "EOF") {
+			debugUncommon("Out of data");
+			// BFL = (BFL&~BFL_LOADING)|BFL_DONELOADING_WAITFORREZ;
+			BFL = BFL&~BFL_LOADING;
+			debugUncommon("BFL_DONELOADING_WAITFORREZ");
+			kcCBSimple$fireCB( ([TRUE, G_int_NumObjs, G_int_NumObjsLoaded]) );
+		}
+		
+		else {
+			list lst_ObjData = llJson2List(str_Data);
+			string str_ObjectClass	= llList2String( lst_ObjData, 0 );
 			
-			
-            string str_Data = readNext();
-			
-            if (str_Data == "EOF") {
-                debugUncommon("Out of data");
-                BFL = (BFL&~BFL_LOADING)|BFL_DONELOADING_WAITFORREZ;
-            }
-			
-			else {
-				list lst_ObjData = llJson2List(str_Data);
-				string str_ObjectClass	= llList2String( lst_ObjData, 0 );
-				
-				// Object name change
-				if (str_ObjectClass == "OBJNAME") {
-					str_ObjectName 	= llList2String( lst_ObjData, 1 );
-				}
-				
-				// Object
-				else if (str_ObjectClass == "OBJ") {
-					G_int_NumObjsLoaded++;
-					
-					string str_ObjectData 	= llList2String( lst_ObjData, 1 );
-					string str_ExtraData 	= llList2String( lst_ObjData, 2 );
-					
-					// QTehIAPzwtAAQGd+AAAAAAAAvgWopwAAAAAAP33PVQ
-					vector vec_Pos = KCLib$base64ToVector( str_ObjectData, -42 );
-					rotation rot_Rot = KCLib$base64ToRotation( str_ObjectData, -24 );
-					
-					vector vec_RootPos = llGetRootPosition();
-					vec_Pos = vec_Pos + G_vec_Pos;
-					
-					lst_ObjDataRez +=  [ str_ObjectName, vec_Pos, rot_Rot, str_ExtraData ];
-				
-				}
+			// Object name change
+			if (str_ObjectClass == "OBJNAME") {
+				str_ObjectName = llList2String( lst_ObjData, 1 );
+				str_SpawnHubName = llList2String( lst_ObjData, 2 );
 			}
-        }
-        
-        if (lst_ObjDataRez != []) {
-            debugUncommon("ObjDataRez: " + llDumpList2String(lst_ObjDataRez, ", "));
-            //KCSpawnHub$rezObjectList(str_SpawnHubUUID, llList2Json(JSON_ARRAY, lst_ObjDataRez), G_int_LoadFlag, cls$name, KCCellLoadObjectsCB$loadingRezCB);
-        }
-    }
-    else {
-    // if (BFL&BFL_DONELOADING_WAITFORREZ) {
-        BFL = BFL&~BFL_LOADING;
-        debugUncommon("BFL_DONELOADING_WAITFORREZ");
-        kcCBSimple$fireCB( ([TRUE, G_int_NumObjs, G_int_NumObjsLoaded]) );
-    }
+			
+			// Object
+			else if (str_ObjectClass == "OBJ") {
+				
+				integer pos = llListFindList(G_lst_SpawnHubs, [str_SpawnHubName]);
+				if(pos == -1) {
+					debugRare("ERROR: Spawn hub not found.");
+					BFL = BFL&~BFL_LOADING;
+					return;
+				}
+				string str_SpawnHubUUID = llList2String(G_lst_SpawnHubs, pos+1 );
+				
+				G_int_NumObjsLoaded++;
+				int_Cycle++;
+				
+				string str_ObjectData 	= llList2String( lst_ObjData, 1 );
+				string str_ExtraData 	= llList2String( lst_ObjData, 2 );
+				
+				// QTehIAPzwtAAQGd+AAAAAAAAvgWopwAAAAAAP33PVQ
+				vector vec_Pos = KCLib$base64ToVector( str_ObjectData, -42 );
+				rotation rot_Rot = KCLib$base64ToRotation( str_ObjectData, -24 );
+				
+				vector vec_RootPos = llGetRootPosition();
+				vec_Pos = vec_Pos + G_vec_Pos;
+				
+				lst_ObjDataRez +=  [ str_ObjectName, vec_Pos, rot_Rot, str_ExtraData ];
+			
+			}
+		}
+	}
+	
+	if (lst_ObjDataRez != []) {
+		debugUncommon("ObjDataRez: " + llDumpList2String(lst_ObjDataRez, ", "));
+		//KCSpawnHub$rezObjectList(str_SpawnHubUUID, llList2Json(JSON_ARRAY, lst_ObjDataRez), G_int_LoadFlag, cls$name, KCCellLoadObjectsCB$loadingRezCB);
+	}
 }
 
 // Named timers
@@ -121,7 +117,7 @@ loadBatchAndRezObjects() {
 timerEvent(string id, string data) {
     if(id == PING_TIMEOUT) {
         debugRare("PING_TIMEOUT - Spawn hubs not found: " + llDumpList2String(G_lst_SpawnHubsWaiting, ", ") );
-        kcCBSimple$fireCB( ([ FALSE, llList2Json(JSON_ARRAY, G_lst_SpawnHubsWaiting) ]) );
+        kcCBSimple$fireCB( ([ FALSE, "Failed to locate spawn hubs: "+llDumpList2String(G_lst_SpawnHubsWaiting, ", "), llList2Json(JSON_ARRAY, G_lst_SpawnHubsWaiting) ]) );
     }
 }
 
@@ -239,7 +235,7 @@ default
             G_int_NumObjsLoaded = 0;
 			
 			//TODO: Temp hacks
-            KCbucket$initDB( export, "ED", TRUE );
+            KCbucket$initDB( export, "ED", FALSE );
 			KCbucket$readSeek( export, KCbucket$dataAddress_Decode(str_DataAddress) );
             
             // G_int_NumObjs       = KCCell$getNumObjs();

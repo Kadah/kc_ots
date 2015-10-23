@@ -20,6 +20,10 @@ integer BFL;
 
 kcCBSimple$vars;
 
+string str_CellName;
+string str_DataAddress;
+vector vec_Pos;
+rotation rot_Rot;
 
 
 // Named timers
@@ -61,7 +65,16 @@ default
 	// Here's where you receive callbacks from running methods
     if(method$isCallback) {
         
-        if ((CB == KCCellLoadCB$objectLoadCB) && (METHOD == KCCellLoadObjectsMethod$load)) {
+        if (CB == KCCellLoadCB$objectLoadInitCB) {
+			if((integer)method_arg(0) == 1) {
+				
+				KCCellLoadObjects$load( str_DataAddress, vec_Pos, rot_Rot , KCCellLoadCB$objectLoadCB );
+			}
+			else {
+				kcCBSimple$fireCB( ([FALSE, method_arg(1)]) );
+			}
+		}
+        else if ((CB == KCCellLoadCB$objectLoadCB) && (METHOD == KCCellLoadObjectsMethod$load)) {
             // BFL = BFL|BFL_OBJS;
             
 			BFL = (BFL&~BFL_LOADING);
@@ -73,7 +86,7 @@ default
                 kcCBSimple$fireCB( ([TRUE, method_arg(1), method_arg(2)]) );
             }
             else {
-                kcCBSimple$fireCB( [FALSE] )
+                kcCBSimple$fireCB( ([FALSE, method_arg(1)]) )
             }
         }
         
@@ -92,14 +105,17 @@ default
             
             BFL = BFL|BFL_LOADING;
 			
-            string str_CellName = method_arg(0);
-            vector vec_Pos = (vector)method_arg(1);
+            str_CellName = method_arg(0);
+            vec_Pos = (vector)method_arg(1);
 			
 			//TODO: temp hack
-			string str_DataAddress = KCbucket$dataAddress_Encode( 0 );
-			rotation rot_Rot = ZERO_ROTATION;
+			str_DataAddress = KCbucket$dataAddress_Encode( 0 );
+			rot_Rot = ZERO_ROTATION;
 			
-            KCCellLoadObjects$load( str_DataAddress, vec_Pos, rot_Rot , KCCellLoadCB$objectLoadCB );
+			
+			KCCellLoadObjects$init( llList2Json(JSON_ARRAY, ["Mission"]), KCCellLoadCB$objectLoadInitCB );
+			
+            
             
             kcCBSimple$delayCB()
             return;

@@ -2,6 +2,7 @@
 
 #define KCCellLoadMethod$load 1200               // 
 
+#define KCCellLoadCB$objectLoadInitCB "Li"                 // 
 #define KCCellLoadCB$objectLoadCB "Lo"                 // 
 
 
