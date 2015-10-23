@@ -87,6 +87,8 @@ default
 				if (str_CellName != "" && int_InputDataLength > 0 && int_NumObjects > 0) {
 					debugUncommon("Indexing CellName: " + str_CellName + ", objs: " + (string)int_NumObjects + ", data length: " + (string)int_InputDataLength);
 					
+					_setProgress("Indexing...");
+					
 					BFL = BFL_PROCESSING;
 					llScriptProfiler(PROFILE_SCRIPT_MEMORY);
 					
@@ -106,7 +108,8 @@ default
 						// Write object name to export db
 						KCbucket$write( export, llList2Json(JSON_ARRAY, [
 							"OBJNAME",
-							str_CurrentObjName
+							str_CurrentObjName,
+							"Mission" //TODO: temp hack, should be name of spawnhub
 						]));
 						// Write object details for matching objects
 						KCbucket$readSeek( objcache, 0 );
