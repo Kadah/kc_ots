@@ -64,9 +64,13 @@
 	#define KCbucket$Separator "`"
 #endif
 
+#ifndef KCbucket$BlockTerminator
+	#define KCbucket$BlockTerminator "|"
+#endif
+
 // Because PRIM_MEDIA_WHITELIST is limited to 1023 for some reason instead of 1024..
-#define KCbucket$BlockSize 1023
-#define KCbucket$BlockSizeLessOne 1022
+#define KCbucket$BlockSize 1022
+#define KCbucket$BlockSizeLessOne 1021
 
 
 // Variable names
@@ -151,7 +155,7 @@ integer int_BlockPrim;
 			int_BlockPrim,\
 			_getBlockFaceNum(int_BlockAddress),\
 			[_getBlockSector(int_BlockAddress),\
-			llGetSubString(str_Data,0,KCbucket$BlockSizeLessOne),\
+			llGetSubString(str_Data,0,KCbucket$BlockSizeLessOne) + KCbucket$BlockTerminator,\
 			PRIM_MEDIA_PERMS_INTERACT, PRIM_MEDIA_PERM_NONE, PRIM_MEDIA_PERMS_CONTROL, PRIM_MEDIA_PERM_NONE]\
 		);\
 	}\
@@ -211,6 +215,7 @@ integer int_bucketSeek;
 			_getBlockFaceNumCurrent(bucket_name),\
 			[_getBlockSectorCurrent(bucket_name)]\
 		);\
+		str_Data = llGetSubString(str_Data,0,KCbucket$BlockSizeLessOne);\
 		KCbucket$getReadBlockAddress(bucket_name)++;\
 		if (str_Data == "EOF" || str_Data == "") {\
 			KCbucket$getReadBuffer(bucket_name) += "EOF";\
@@ -242,6 +247,7 @@ integer int_bucketSeek;
 				_getBlockFaceNumCurrent(bucket_name),\
 				[_getBlockSectorCurrent(bucket_name)]\
 			);\
+			str_Data = llGetSubString(str_Data,0,KCbucket$BlockSizeLessOne);\
 		} else if (KCbucket$getReadBlockAddress(bucket_name) == KCbucket$getWriteBlockAddress(bucket_name)) {\
 			str_Data = KCbucket$getWriteBuffer(bucket_name) + KCbucket$Separator + "EOF";\
 			/*llOwnerSay("readNextOpen end");*/\
