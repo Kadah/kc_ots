@@ -1,19 +1,9 @@
 ﻿/*
-Cell Save: Indexer
+Cell Save: Unique Objects
 
-	Basic theory of operation of this is to take the following stored info from the cache:
-	[obj_name+obj_UUID+obj_pos+obj_rot;obj_extra_data;obj2_name+obj2_UUID+obj2_pos+obj2_rot;obj2_extra_data;...]
-	And, without memory limitations, split the info in to these:
-	[obj_name_index+obj_pos+obj_rot;obj_extra_data;obj_name_index+obj2_pos+obj2_rot;obj2_extra_data;...]
-	[obj_name;obj2_name;...]
-	[obj_UUID;obj2_UUID;...]
-	Where the last 2 contain no duplicates and the first has objects of the same name are stored constructively.
-	
-	TODO: Possibly dump the obj_name_index and store the name in the main serialized stream as a section header.
-	eg. [obj_name;pos+rot;extra_data;pos+rot;extra_data;obj2_name;pos+rot;extra_data;...]
-	
-	This is a long amount of script time here, but the size of the saved cell should not be limit here
-	Time to process will be somewhat geometric...
+	This processes the raw object data cache and creates 2 lists:
+	namecache: List of all unique object names
+	idcache: List of UUIDs, one for each uniquely named object above
 */
 
 #define USE_SHARED ["config", "mis"]
@@ -94,6 +84,8 @@ default
 					
 					//Reset all variables
 					int_Cycles = 0;
+					int_ObjNum = 0;
+					int_UniqueObjNum = 0;
 					str_LastObjName = "";
 					KCbucket$writeSeek( namecache, 0 );
 					KCbucket$writeSeek( idcache, 0 );
