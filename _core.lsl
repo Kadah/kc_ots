@@ -23,6 +23,7 @@
 
 // Cell saving
 #include "./classes/kc CellSaveController.h.lsl"
+#include "./classes/kc CellPackager.h.lsl"
 #include "./classes/kc CellSave.h.lsl"
 #include "./classes/kc CellSaveObjects.h.lsl"
 #include "./classes/kc CellSaveIndexer.h.lsl"
